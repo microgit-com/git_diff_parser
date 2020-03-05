@@ -1,10 +1,12 @@
 require "logger"
+
 module GitDiffParser
   # The array of patch
   class Patches
     include Enumerable(Patch)
 
     @patches : Array(Patch)
+
     # @return [Patches<Patch>]
     def self.[](*ary)
       new(ary)

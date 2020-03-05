@@ -3,10 +3,10 @@ module GitDiffParser
   class Patch
     RANGE_ADD_INFORMATION_LINE = /^@@ .+\+(?<line_number>\d+)/
     RANGE_DEL_INFORMATION_LINE = /^@@ \-(?<line_number>\d+)/
-    MODIFIED_LINE          = /^\+(?!\+|\+)/
-    REMOVED_LINE           = /^[-]/
-    NOT_REMOVED_LINE       = /^[^-]/
-    NOT_MOD_REM_LINE       = /^[^-+]/
+    MODIFIED_LINE              = /^\+(?!\+|\+)/
+    REMOVED_LINE               = /^[-]/
+    NOT_REMOVED_LINE           = /^[^-]/
+    NOT_MOD_REM_LINE           = /^[^-+]/
 
     property :file, :body, :secure_hash
 
@@ -67,7 +67,7 @@ module GitDiffParser
       @body.lines.map_with_index do |content, index|
         case content
         when RANGE_ADD_INFORMATION_LINE
-          line_nr =  RANGE_ADD_INFORMATION_LINE.match(content).not_nil!
+          line_nr = RANGE_ADD_INFORMATION_LINE.match(content).not_nil!
           line_number = line_nr["line_number"].to_i
         when MODIFIED_LINE
           line = Line.new(
