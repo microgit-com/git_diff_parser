@@ -1,5 +1,3 @@
-require "logger"
-
 module GitDiffParser
   # The array of patch
   class Patches
@@ -31,24 +29,27 @@ module GitDiffParser
             file_name = ""
           end
           body = false
-        when /^\-\-\- a\/(?<file_name>.*)/
+        when /^\-\-\- (b|a)\/(?<file_name>.*)/
           matches_minus = /^\-\-\- a\/(?<file_name>.*)/.match(line)
           if !matches_minus.nil?
             file_name = matches_minus.not_nil!["file_name"].rstrip
             body = true
           end
-        when /^\+\+\+ (b|a|)\/(?<file_name>.*)/
+        when /^\+\+\+ (b|a)\/(?<file_name>.*)/
           matches = /^\+\+\+ b\/(?<file_name>.*)/.match(line)
           if !matches.nil? && file_name.empty?
             file_name = matches.not_nil!["file_name"].rstrip
             body = true
           end
-        when /^(?<body>[\ @\+\-\\].*)/
-          patch << line if file_name != line.rstrip
-          if !patch.empty? && body && line_count == size + 1
-            parsed << Patch.new(patch.join("\n") + "\n", {file: file_name})
-            patch.clear
-            file_name = ""
+        when /^(?<body>(?!-{3})(?!\+{3})[\ @\+{1}\-{1}\\].*)/
+          bodyness = /^(?<body>(?!-{3})(?!\+{3})[\ @\+{1}\-{1}\\].*)/.match(line)
+          if !bodyness.nil?
+            patch << bodyness.not_nil!["body"]
+            if !patch.empty? && body && line_count == size + 1
+              parsed << Patch.new(patch.join("\n") + "\n", {file: file_name})
+              patch.clear
+              file_name = ""
+            end
           end
         end
       end
