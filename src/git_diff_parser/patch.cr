@@ -54,6 +54,7 @@ module GitDiffParser
     @file : String | Int32
     @body : String
     @secure_hash : String | Int32
+    @all_lines : Array(Line) | Nil
 
     def initialize(body, options = {} of String => String | Int32)
       @body = body || ""
@@ -61,48 +62,57 @@ module GitDiffParser
       @secure_hash = options[:secure_hash]? || options["secure_hash"]? || ""
     end
 
-    # @return [Array<Line>] changed lines
-    def changed_lines
-      line_number = 0
-      @body.lines.map_with_index do |content, index|
+    def all_lines
+      return @all_lines.not_nil! unless @all_lines.nil?
+      remove_number = 0
+      add_number = 0
+      unchanged_number = 0
+      @all_lines = @body.lines.map_with_index do |content, index|
         case content
         when RANGE_ADD_INFORMATION_LINE
           line_nr = RANGE_ADD_INFORMATION_LINE.match(content).not_nil!
-          line_number = line_nr["line_number"].to_i
+          remove_number = line_nr["line_number"].to_i
+          add_number = line_nr["line_number"].to_i
+          unchanged_number = line_nr["line_number"].to_i
         when MODIFIED_LINE
           line = Line.new(
             content,
-            line_number,
+            add_number,
             index,
+            Line::Mode::Modified
           )
-          line_number += 1
+          add_number += 1
+        when REMOVED_LINE
+          line = Line.new(
+            content,
+            remove_number,
+            index,
+            Line::Mode::Removed
+          )
+          remove_number += 1
         when NOT_REMOVED_LINE
-          line_number += 1
+          add_number += 1
+        when NOT_MOD_REM_LINE
+          line = Line.new(
+            content,
+            unchanged_number,
+            index,
+            Line::Mode::Unchanged
+          )
+          unchanged_number += 1
         end
-
         line
       end.compact
     end
 
+    # @return [Array<Line>] changed lines
+    def changed_lines
+      all_lines.select { |l| l.mode == Line::Mode::Modified }
+    end
+
     # @return [Array<Line>] removed lines
     def removed_lines
-      line_number = 0
-
-      @body.lines.map_with_index do |content, index|
-        case content
-        when RANGE_ADD_INFORMATION_LINE
-          line_number = RANGE_ADD_INFORMATION_LINE.match(content).not_nil!["line_number"].to_i
-        when REMOVED_LINE
-          line = Line.new(
-            content,
-            line_number,
-            index,
-          )
-          line_number += 1
-        end
-
-        line
-      end.compact
+      all_lines.select { |l| l.mode == Line::Mode::Removed }
     end
 
     # @return [Array<Integer>] changed line numbers
