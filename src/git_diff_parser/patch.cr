@@ -8,6 +8,12 @@ module GitDiffParser
     NOT_REMOVED_LINE           = /^[^-]/
     NOT_MOD_REM_LINE           = /^[^-+]/
 
+    # The maximum size of a diff to display.
+    DIFF_SIZE_LIMIT = 102400 # 100 KB
+
+    # The maximum size before a diff is collapsed.
+    DIFF_COLLAPSE_LIMIT = 10240 # 10 KB
+
     property :file, :body, :secure_hash
 
     # @!attribute [rw] file
@@ -55,6 +61,7 @@ module GitDiffParser
     @body : String
     @secure_hash : String | Int32
     @all_lines : Array(Line) | Nil
+    @too_large : Bool | Nil
 
     def initialize(body, options = {} of String => String | Int32)
       @body = body || ""
@@ -91,7 +98,7 @@ module GitDiffParser
           )
           remove_number += 1
         when NOT_REMOVED_LINE
-          add_number += 1
+          # add_number += 1
         when NOT_MOD_REM_LINE
           line = Line.new(
             content,
@@ -103,6 +110,18 @@ module GitDiffParser
         end
         line
       end.compact
+    end
+
+    def too_large?
+      if @too_large.nil?
+        @too_large = @body.bytesize >= DIFF_SIZE_LIMIT
+      else
+        @too_large
+      end
+    end
+
+    def collapsible?
+      @body.bytesize >= DIFF_COLLAPSE_LIMIT
     end
 
     # @return [Array<Line>] changed lines
